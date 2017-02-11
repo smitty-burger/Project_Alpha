@@ -202,7 +202,10 @@ int user_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<
 	int choice;
 	cin >> choice;
 	
-	while (choice < -1 || choice > arms)
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	while (choice < -1 || choice >= arms)
 	{
 		if (choice < -1)
 		{
@@ -210,7 +213,7 @@ int user_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<
 				"Please Pick a new arm number. (enter -1 to quit)\n" << endl;
 			cin >> choice;
 		}
-		else if (choice > arms)
+		else if (choice >= arms)
 		{
 			cout << "\t\t    ***" << choice << " is not a valid arm number***\n\n " <<
 				"Please Pick a new arm number. (enter -1 to quit)\n" << endl;
@@ -220,7 +223,7 @@ int user_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<
 
 	if (choice > -1)
 	{
-		std::default_random_engine gen;
+		
 		std::normal_distribution<double> distm(mean[choice], stddev[choice]);
 
 		pvalue[choice] = (distm(gen));
