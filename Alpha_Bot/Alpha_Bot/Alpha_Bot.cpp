@@ -11,6 +11,7 @@
 //History:	    Date		Resp. Eng.			Modification
 //              _______		_________________	_____________
 //				2/9/17		Tyler Burger		initial 
+//				2/12/17		Tyler Burger		Q=Learner added
 //
 //Input:
 //	N/A
@@ -48,6 +49,7 @@ chkpnt++;
 #include <vector>
 #include <iomanip>
 #include <deque>
+#include <algorithm>
 
 using namespace std;
 
@@ -58,9 +60,16 @@ void random_or_assigned(vector<double> &mean, vector<double> &stddev, int arms);
 		//When called, get or assign mean and stddev for each arm
 int user_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<double> &pvalue, int &pulln, deque<double> &bank);
 		//simulate an arm pull and give an output value for the pull
+int UQ_prompt(double &epsilon, double &alpha, int &life_cycle);
+		//prompt user for values associated with q-learner program
+int Q_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<double> &pvalue, int &pulln, deque<double> &bank, double epsilon, double alpha, int life_cycle, deque<double> &history);
+		//simulate arm pulls with a q-learner
+
 //===========================================================================					MAIN
 int main()
 {
+	cout << fixed << showpoint << setprecision(2);
+
 	// Get number of arms from user
 	int arms;
 	cout << "How many arms do you want your Bandit to have?" << endl;
@@ -79,11 +88,23 @@ int main()
 	vector < double> stddev;
 	random_or_assigned(mean, stddev, arms);
 
-	// Create arms value vectors
+	// User play or Q-Learner play?
+	int UQ_bool;
+	double epsilon;
+	double alpha;
+	int life_cycle;
+	UQ_bool = UQ_prompt(epsilon, alpha, life_cycle);
+
+	// Pause the console screen and wait until user input
+	system("PAUSE");
+
+	// Create arms value vectors and history
 	deque<double> pvalue;
+	deque<double> history;
 	// Initialize Previous Payout to 0
 	for (int i = 0; i < arms; i++)
 	{
+		history.push_back(0.0);
 		pvalue.push_back(0.0);
 	}
 
@@ -94,17 +115,32 @@ int main()
 	// Initialize pull number
 	int pulln = 0;
 	int choice;
+	int cycles = 0;
 
-	do
+	if (UQ_bool == 0)
 	{
-		// Update Console
-		update_console(pvalue, arms, bank, pulln);
+		do
+		{
+			// Update Console
+			update_console(pvalue, arms, bank, pulln);
 
-		// User Pull
-		choice = user_pull_arm(mean, stddev, arms, pvalue, pulln, bank);
+			// User Pull
+			choice = user_pull_arm(mean, stddev, arms, pvalue, pulln, bank);
 
-	} while (choice != -1);
-	
+		} while (choice != -1);
+	}
+	else if (UQ_bool == 1)
+	{
+		do
+		{
+			// Update Console
+			update_console(pvalue, arms, bank, pulln);
+
+			// Q-Learner Pull
+			choice = Q_pull_arm(mean, stddev, arms, pvalue, pulln, bank, epsilon, alpha, life_cycle, history);
+
+		} while (choice != -1);
+	}
 
 	return (0);
 }
@@ -125,7 +161,7 @@ void update_console(deque<double> pvalue, int arms, deque<double> bank, int pull
 	int i = 0;
 	while (i < arms)
 	{
-		cout << "\t" << i;
+		cout << "\t" << i << "\t";
 		i++;
 	}
 
@@ -133,20 +169,21 @@ void update_console(deque<double> pvalue, int arms, deque<double> bank, int pull
 	cout << "\n\t\t";
 	for (int i = 0; i < arms; i++)
 	{
-		cout << "========";
+		cout << "===============";
 	}
 
 	//Display most recent payout for each arm
 	cout << "\nPrev. Payout\t";
 	for (int i = 0; i < arms; i++)
 	{
-		cout << "$" << pvalue[i] << "\t";
+		cout << "$" << pvalue[i] << "\t\t";
 	}
 
 	//Keep a running tab of pulls and the amount earned or lost
 	cout << "\n\n\n\tBank\t$" << bank[0] << endl;
 	cout << "\n\tPull #\t" << pulln << "\n\n\n" << endl;
 }
+
 //===========================================================================					random_or_assigned
 /*	||	Brief	||
 Prompt user for a random option for the mean and standard distribution. If random 
@@ -156,9 +193,10 @@ each variable.
 void random_or_assigned(vector<double> &mean, vector<double> &stddev, int arms)
 {
 	char letter;
-	std::default_random_engine gen;
-	std::normal_distribution<double> distm(0.0, 10.0);
-	std::normal_distribution<double> distd(0.0, 25.0);
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::normal_distribution<double> distm(0.0, 15.0);
+	std::normal_distribution<double> distd(0.0, 30.0);
 
 	// Prompt user for random distribution or arm specific distribution
 	cout << "\t\tRandom StdDev and Mean? (Y/n)" << endl;
@@ -173,7 +211,13 @@ void random_or_assigned(vector<double> &mean, vector<double> &stddev, int arms)
 		for ( i = 0; i < arms; i++)
 		{
 			mean.push_back(distm(gen));
-			stddev.push_back(distd(gen));
+
+			double temp;
+			do
+			{
+				temp = distd(gen);
+			} while (temp <= 0);
+			stddev.push_back(temp);
 		}
 		break;
 
@@ -193,8 +237,8 @@ void random_or_assigned(vector<double> &mean, vector<double> &stddev, int arms)
 		break;
 	}
 	cout << "All arm variables have been assigned." << endl;
-	system("PAUSE");
 }
+
 //===========================================================================					user_pull_arm
 int user_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<double> &pvalue, int &pulln, deque<double> &bank)
 {
@@ -231,5 +275,135 @@ int user_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<
 		bank.push_front(bank[0] + pvalue[choice]);
 	}
 
+	return choice;
+}
+
+//===========================================================================					UQ_prompt
+int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
+{
+	int UQ_bool;
+	char letter;
+
+	cout << "\n\n\t\tUser Play or Q-Learner? (U/q)" << endl;
+	cin >> letter;
+
+	int i;
+	switch (letter)
+	{
+		//If U(u) then let the user play
+	case 'U':
+	case 'u':
+		UQ_bool = 0;
+		epsilon = -1;
+		alpha = -1;
+		life_cycle = -1;
+		break;
+
+		//If q(Q) then assign user defined variables
+	case 'Q':
+	case 'q':
+		UQ_bool = 1;
+		cout << "\n\nPlease pick an exploration ratio (epsilon) (0 <= E <= 1)" << endl;
+		cin >> epsilon;
+		while (epsilon < 0 || epsilon > 1)
+		{
+			if (epsilon < 0)
+			{
+				cout << "\t\t    ***" << epsilon << " is not a valid value***\n\n " <<
+					"Please pick a new value (0 <= E <= 1)" << endl;
+				cin >> epsilon;
+			}
+			else if (epsilon > 1)
+			{
+				cout << "\t\t    ***" << epsilon << " is not a valid value***\n\n " <<
+					"Please pick a new value (0 <= E <= 1)" << endl;
+				cin >> epsilon;
+			}
+		}
+
+		cout << "\n\nPlease pick a learning ratio (alpha) (0 <= A <= 1)" << endl;
+		cin >> alpha;
+		while (alpha < 0 || alpha > 1)
+		{
+			if (alpha < 0)
+			{
+				cout << "\t\t    ***" << alpha << " is not a valid value***\n\n " <<
+					"Please pick a new value (0 <= A <= 1)" << endl;
+				cin >> alpha;
+			}
+			else if (alpha > 1)
+			{
+				cout << "\t\t    ***" << alpha << " is not a valid value***\n\n " <<
+					"Please pick a new value (0 <= A <= 1)" << endl;
+				cin >> alpha;
+			}
+		}
+
+		cout << "\n\nPlease choose a number of cycles for the Q-Learner to iterate" << endl;
+		cin >> life_cycle;
+		while (life_cycle < 0)
+		{
+			cout << "\t\t    ***" << life_cycle << " is not a valid value***\n\n " <<
+				"Value must be a positive integer" << endl;
+			cin >> life_cycle;
+		}
+
+		break;
+
+	}
+	return UQ_bool;
+}
+
+//===========================================================================					Q_pull_arm
+int Q_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<double> &pvalue, int &pulln, deque<double> &bank, double epsilon, double alpha, int life_cycle, deque<double> &history)
+{
+	int random_arm;
+	int exploit;
+	int choice;
+	int best;
+	int i = 0;
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	//Find the best arm based on history
+	auto biggest = max_element(begin(history), end(history));
+	best = distance(begin(history), biggest);
+
+	//Randomly pick an arm to pull, and if the next pull should be exploratory
+	//Get System Time
+	unsigned seed = time(0);
+	//Seed Random Number Generator
+	srand(seed);
+	//Pick arm
+	random_arm = rand() % arms;
+	//Exploit?
+	double exp_thresh;
+	exp_thresh = epsilon * 10000;
+	exploit = rand() % 10000;
+	if (exploit <= exp_thresh)
+	{
+		choice = random_arm;
+	}
+	else
+	{
+		choice = best;
+	}
+
+	//Terminate program at the end o fthe last cycle
+	if (life_cycle == pulln)
+	{
+		choice = -1;
+	}
+	//Pull selected arm and update history and payout value
+	if (choice > -1)
+	{
+
+		std::normal_distribution<double> distm(mean[choice], stddev[choice]);
+		pvalue[choice] = (distm(gen));
+		history[choice] = pvalue[choice] * alpha + history[choice] * (1 - alpha);
+		pulln++;
+		bank.push_front(bank[0] + pvalue[choice]);
+	}
 	return choice;
 }
