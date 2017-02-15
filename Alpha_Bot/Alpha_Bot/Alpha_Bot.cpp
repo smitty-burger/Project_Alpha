@@ -69,6 +69,8 @@ int Q_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<dou
 		//simulate arm pulls with a q-learner
 void TestA_Function(vector<double> &mean, vector<double> &stddev, int arms);
 		//run self test A
+void TestB_Function(deque<double> pull_count, vector<double> mean, vector<double> stddev, int arms, int pulln);
+		//run self test B
 
 //===========================================================================					MAIN
 int main()
@@ -106,11 +108,13 @@ int main()
 	// Create arms value vectors and history
 	deque<double> pvalue;
 	deque<double> history;
+	deque<double> pull_count;
 	// Initialize Previous Payout to 0
 	for (int i = 0; i < arms; i++)
 	{
 		history.push_back(0.0);
 		pvalue.push_back(0.0);
+		pull_count.push_back(0.0);
 	}
 
 	// Create Bank
@@ -121,6 +125,7 @@ int main()
 	int pulln = 0;
 	int choice;
 	int cycles = 0;
+	
 
 	if (UQ_bool == 0)
 	{
@@ -144,12 +149,24 @@ int main()
 			// Q-Learner Pull
 			choice = Q_pull_arm(mean, stddev, arms, pvalue, pulln, bank, epsilon, alpha, life_cycle, history);
 
+			// Keep count of how many times each arm gets pulled
+			if (choice != -1 && life_cycle > 299)
+			{
+				pull_count[choice] = pull_count[choice] + 1;
+			}
+
 		} while (choice != -1);
 	}
 	else if (UQ_bool == -1)
 	{
 		// Run Self test A
 		TestA_Function(mean, stddev, arms);
+	}
+
+	// Send variables to TestB_Function for test for Pass/Fail grading
+	if (arms < 7 && life_cycle > 299)
+	{
+		TestB_Function(pull_count, mean, stddev, arms, pulln);
 	}
 
 	return (0);
@@ -192,6 +209,7 @@ void update_console(deque<double> pvalue, int arms, deque<double> bank, int pull
 //===========================================================================					random_or_assigned
 void random_or_assigned(vector<double> &mean, vector<double> &stddev, int arms)
 {
+	//Initialize random device
 	char letter;
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -236,19 +254,24 @@ void random_or_assigned(vector<double> &mean, vector<double> &stddev, int arms)
 		}
 		break;
 	}
-	cout << "All arm variables have been assigned." << endl;
+
+	//Notify user when all arm variables have been asigned
+	cout << "\nAll arm variables have been assigned." << endl;
 }
 
 //===========================================================================					user_pull_arm
 int user_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<double> &pvalue, int &pulln, deque<double> &bank)
 {
+	//Prompt user
 	cout << "Which arm do you want to pull? (enter -1 to quit)" << endl;
 	int choice;
 	cin >> choice;
 	
+	//Initialize random device
 	std::random_device rd;
 	std::mt19937 gen(rd());
 
+	//Loop to make sure the user enters an appropriate arm number, -1 will terminate program
 	while (choice < -1 || choice >= arms)
 	{
 		if (choice < -1)
@@ -265,6 +288,7 @@ int user_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<
 		}
 	}
 
+	// Perform this to create a new "payout" from the called arm, skip if -1 is entered
 	if (choice > -1)
 	{
 		
@@ -284,10 +308,10 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
 	int UQ_bool;
 	char letter;
 
-	cout << "\n\n\tUser Play or Action-Value-Learner? (U/q)	[T for Test A]" << endl;
+	//Prompt User
+	cout << "\n\n\tUser Play or Action-Value-Learner(A.V.L.)? (U/q)	[T for Test A]" << endl;
 	cin >> letter;
 
-	int i;
 	switch (letter)
 	{
 		//If U(u) then let the user play
@@ -304,23 +328,6 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
 	case 'Q':
 	case 'q':
 		UQ_bool = 1;
-		cout << "\n\nPlease pick an exploration ratio (epsilon) (0 <= E <= 1)" << endl;
-		cin >> epsilon;
-		while (epsilon < 0 || epsilon > 1)
-		{
-			if (epsilon < 0)
-			{
-				cout << "\t\t    ***" << epsilon << " is not a valid value***\n\n " <<
-					"Please pick a new value (0 <= E <= 1)" << endl;
-				cin >> epsilon;
-			}
-			else if (epsilon > 1)
-			{
-				cout << "\t\t    ***" << epsilon << " is not a valid value***\n\n " <<
-					"Please pick a new value (0 <= E <= 1)" << endl;
-				cin >> epsilon;
-			}
-		}
 
 		cout << "\n\nPlease pick a learning ratio (alpha) (0 <= A <= 1)" << endl;
 		cin >> alpha;
@@ -340,7 +347,25 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
 			}
 		}
 
-		cout << "\n\nPlease choose a number of cycles for the Q-Learner to iterate" << endl;
+		cout << "\n\nPlease pick an exploration ratio (epsilon) (0 <= E <= 1)" << endl;
+		cin >> epsilon;
+		while (epsilon < 0 || epsilon > 1)
+		{
+			if (epsilon < 0)
+			{
+				cout << "\t\t    ***" << epsilon << " is not a valid value***\n\n " <<
+					"Please pick a new value (0 <= E <= 1)" << endl;
+				cin >> epsilon;
+			}
+			else if (epsilon > 1)
+			{
+				cout << "\t\t    ***" << epsilon << " is not a valid value***\n\n " <<
+					"Please pick a new value (0 <= E <= 1)" << endl;
+				cin >> epsilon;
+			}
+		}
+
+		cout << "\n\nPlease choose a number of cycles for the A.V.L. to iterate" << endl;
 		cin >> life_cycle;
 		while (life_cycle < 0)
 		{
@@ -350,6 +375,8 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
 		}
 
 		break;
+
+		//If another letter is picked then start self test A
 	default:
 		UQ_bool = -1;
 		break;
@@ -415,8 +442,11 @@ int Q_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<dou
 //===========================================================================					TestA_Function
 void TestA_Function(vector<double> &mean, vector<double> &stddev, int arms)
 {
+	//Initialize random number generator
 	std::random_device rd;
 	std::mt19937 gen(rd());
+
+	//Variables
 	deque<double> temp;
 	double u;
 	double t;
@@ -425,40 +455,99 @@ void TestA_Function(vector<double> &mean, vector<double> &stddev, int arms)
 	int life_cycle = 150000;
 	double tol = .1;
 
+	//Clear screen and prompt user that Self Test A is now running
 	system("CLS");
 	cout << "\t     ***Running Self Test A***\n" << endl;
 	//cout << "Cycles Run: " << life_cycle << "\n" << endl;
 
+	//Run test for each arm
 	for (i = 0; i < arms; i++)
 	{
+		//Display arm number
 		cout << "Arm: " << i << endl;
+
+		//Initialize distribution for arm i
 		std::normal_distribution<double> distm(mean[i], stddev[i]);
+
+		//Create temporary deque of statistical values
 		for (j = 0; j < life_cycle; j++)
 		{
 			t = (distm(gen));
 			temp.push_back(t);
 		}
 		t = 0;
+
+		//Sum all of the statistical values
 		for (j = 0; j < life_cycle; j++)
 		{
 			t = t + temp[j];
 		}
+
+		//Compute mean of data set
 		u = t / life_cycle;
+
+		//Compare mean values
 		cout << "Mean:  \t" << mean[i] << "\t\t" << "Calculated Mean:     \t"<< u << endl;
+
+		//Check for 10% error in mean
 		assert(abs(mean[i] + mean[i] * tol) > abs(u));
 		assert(abs(u) > abs(mean[i] - mean[i] * tol));
 
+		//Find sum of the squares for standard deviation
 		t = 0;
 		for (j = 0; j < life_cycle; j++)
 		{
 			t = t + (temp[j] - u) * (temp[j] - u);
 		}
+
+		//Compute standard deviation
 		t = sqrt(t / (life_cycle - 1));
+
+		//Compare StdDev values
 		cout << "StdDev:\t" << stddev[i] << "\t\t" << "Calculated StdDev: \t" << t << "\n\n" << endl;
+
+		//Check for 10% error is StdDev
 		assert(stddev[i] + stddev[i] * tol > t);
 		assert(t > stddev[i] - stddev[i] * tol);
+
+		//Clear deque to save memory, deque is reused for each iteration
 		temp.clear();
 		
 
 	}
 }
+
+//===========================================================================					TestB_Function
+void TestB_Function(deque<double> pull_count, vector<double> mean, vector<double> stddev, int arms, int pulln)
+{
+	int high_count;
+	deque<double> all_arm;
+	int best_arm;
+
+	auto biggest = max_element(begin(pull_count), end(pull_count));
+	high_count = distance(begin(pull_count), biggest);
+
+	for (int i = 0; i < arms; i++)
+	{
+		all_arm.push_back(((mean[i] + stddev[i]) / (stddev[i] * 2)) * 100);
+	}
+
+	auto biggins = max_element(begin(all_arm), end(all_arm));
+	best_arm = distance(begin(all_arm), biggins);
+
+	assert(best_arm == high_count);
+	
+	cout << "\n\nA.V.L. has picked " << best_arm << " as the best arm!\n\n" << endl;
+
+}
+//===========================================================================					File_Name
+/*
+	time_t rawtime;
+	struct tm * timeinfo;
+	char buffer[80];
+
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+
+	strftime(buffer, 80, "%F_%T", timeinfo);
+*/
