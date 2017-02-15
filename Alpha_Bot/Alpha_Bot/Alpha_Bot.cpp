@@ -12,6 +12,7 @@
 //              _______		_________________	_____________
 //				2/9/17		Tyler Burger		initial 
 //				2/12/17		Tyler Burger		Q=Learner added
+//				2/14/17		Tyler Burger		Added TestA_Function
 //
 //Input:
 //	N/A
@@ -50,6 +51,8 @@ chkpnt++;
 #include <iomanip>
 #include <deque>
 #include <algorithm>
+#include <numeric>
+#include <functional>
 
 using namespace std;
 
@@ -64,6 +67,8 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle);
 		//prompt user for values associated with q-learner program
 int Q_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<double> &pvalue, int &pulln, deque<double> &bank, double epsilon, double alpha, int life_cycle, deque<double> &history);
 		//simulate arm pulls with a q-learner
+void TestA_Function(vector<double> &mean, vector<double> &stddev, int arms);
+		//run self test A
 
 //===========================================================================					MAIN
 int main()
@@ -141,16 +146,16 @@ int main()
 
 		} while (choice != -1);
 	}
+	else if (UQ_bool == -1)
+	{
+		// Run Self test A
+		TestA_Function(mean, stddev, arms);
+	}
 
 	return (0);
 }
 
 //===========================================================================					update_console
-/*	||	Brief	||
-Creats an updated version of the screen. All arms will be displayed along
-with their most recent pull value. The number of pulls and the amount earned or
-lost will be displayed.
-*/
 void update_console(deque<double> pvalue, int arms, deque<double> bank, int pulln)
 {
 	// Clear Console Screen
@@ -185,11 +190,6 @@ void update_console(deque<double> pvalue, int arms, deque<double> bank, int pull
 }
 
 //===========================================================================					random_or_assigned
-/*	||	Brief	||
-Prompt user for a random option for the mean and standard distribution. If random 
-is picked, randomly asign variables. If user chooses to enter it in, prompt for
-each variable.
-*/
 void random_or_assigned(vector<double> &mean, vector<double> &stddev, int arms)
 {
 	char letter;
@@ -284,7 +284,7 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
 	int UQ_bool;
 	char letter;
 
-	cout << "\n\n\t\tUser Play or Q-Learner? (U/q)" << endl;
+	cout << "\n\n\tUser Play or Action-Value-Learner? (U/q)	[T for Test A]" << endl;
 	cin >> letter;
 
 	int i;
@@ -297,6 +297,7 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
 		epsilon = -1;
 		alpha = -1;
 		life_cycle = -1;
+
 		break;
 
 		//If q(Q) then assign user defined variables
@@ -348,6 +349,9 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
 			cin >> life_cycle;
 		}
 
+		break;
+	default:
+		UQ_bool = -1;
 		break;
 
 	}
@@ -406,4 +410,55 @@ int Q_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<dou
 		bank.push_front(bank[0] + pvalue[choice]);
 	}
 	return choice;
+}
+
+//===========================================================================					TestA_Function
+void TestA_Function(vector<double> &mean, vector<double> &stddev, int arms)
+{
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	deque<double> temp;
+	double u;
+	double t;
+	int i;
+	int j;
+	int life_cycle = 150000;
+	double tol = .1;
+
+	system("CLS");
+	cout << "\t     ***Running Self Test A***\n" << endl;
+	//cout << "Cycles Run: " << life_cycle << "\n" << endl;
+
+	for (i = 0; i < arms; i++)
+	{
+		cout << "Arm: " << i << endl;
+		std::normal_distribution<double> distm(mean[i], stddev[i]);
+		for (j = 0; j < life_cycle; j++)
+		{
+			t = (distm(gen));
+			temp.push_back(t);
+		}
+		t = 0;
+		for (j = 0; j < life_cycle; j++)
+		{
+			t = t + temp[j];
+		}
+		u = t / life_cycle;
+		cout << "Mean:  \t" << mean[i] << "\t\t" << "Calculated Mean:     \t"<< u << endl;
+		assert(abs(mean[i] + mean[i] * tol) > abs(u));
+		assert(abs(u) > abs(mean[i] - mean[i] * tol));
+
+		t = 0;
+		for (j = 0; j < life_cycle; j++)
+		{
+			t = t + (temp[j] - u) * (temp[j] - u);
+		}
+		t = sqrt(t / (life_cycle - 1));
+		cout << "StdDev:\t" << stddev[i] << "\t\t" << "Calculated StdDev: \t" << t << "\n\n" << endl;
+		assert(stddev[i] + stddev[i] * tol > t);
+		assert(t > stddev[i] - stddev[i] * tol);
+		temp.clear();
+		
+
+	}
 }
