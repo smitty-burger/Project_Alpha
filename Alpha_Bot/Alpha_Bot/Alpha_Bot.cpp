@@ -13,6 +13,7 @@
 //				2/9/17		Tyler Burger		initial 
 //				2/12/17		Tyler Burger		Q=Learner added
 //				2/14/17		Tyler Burger		Added TestA_Function
+//				2/15/17		Tyler Burger		Added TestB_Function
 //
 //Input:
 //	N/A
@@ -75,167 +76,100 @@ void TestB_Function(deque<double> pull_count, vector<double> mean, vector<double
 //===========================================================================					MAIN
 int main()
 {
-	////For big iterative testing
-	deque<double> big_bank; 
-	big_bank.assign(1000, 0);
-	deque<double> mini_bank(1000);
-	deque<double> big_pull0(1000);
-	deque<double> big_pull1(1000);
-	deque<double> big_pull2(1000);
-	deque<double> big_pull3(1000);
-	deque<double> big_pull4(1000);
-	int arms = 5;
-	vector<double> mean;
-	mean.push_back(0);
-	mean.push_back(-2);
-	mean.push_back(-1);
-	mean.push_back(2);
-	mean.push_back(1);
-	vector < double> stddev;
-	stddev.push_back(.7);
-	stddev.push_back(5);
-	stddev.push_back(2);
-	stddev.push_back(.3);
-	stddev.push_back(.5);
-	int UQ_bool = 1;
-	double epsilon = .2;
-	double alpha = .1;
-	int life_cycle = 1000;
-	////
-
-
 	cout << fixed << showpoint << setprecision(2);
 
-	for (int ijk = 0; ijk < 30; ijk++)
+	// Get number of arms from user
+	int arms;
+	cout << "How many arms do you want your Bandit to have?" << endl;
+	cin >> arms;
+
+	// Check choice
+	while (arms < 0)
 	{
-		////
-		//// Get number of arms from user
-		//int arms;
-		//cout << "How many arms do you want your Bandit to have?" << endl;
-		//cin >> arms;
-
-		//// Check choice
-		//while (arms < 0)
-		//{
-		//	cout << "\t\t    ***" << arms << " is not a valid arm number***\n\n\n\n\n " <<
-		//		"Please Pick a new number of arms\n\n\n\n\n\n" << endl;
-		//	cin >> arms;
-		//}
-
-		//// Get or assign mean and stddev for each arm
-		//vector<double> mean;
-		//vector < double> stddev;
-		//random_or_assigned(mean, stddev, arms);
-
-		//// User play or Q-Learner play?
-		//int UQ_bool;
-		//double epsilon;
-		//double alpha;
-		//int life_cycle;
-		//UQ_bool = UQ_prompt(epsilon, alpha, life_cycle);
-
-		//// Pause the console screen and wait until user input
-		//system("PAUSE");
-		////
-
-		// Create arms value vectors and history
-		deque<double> pvalue;
-		deque<double> history;
-		deque<double> pull_count;
-		// Initialize Previous Payout to 0
-		for (int i = 0; i < arms; i++)
-		{
-			history.push_back(0.0);
-			pvalue.push_back(0.0);
-			pull_count.push_back(0.0);
-		}
-
-		// Create Bank
-		deque<double> bank;
-		bank.push_back(1000);
-
-		// Initialize pull number
-		int pulln = 0;
-		int choice;
-		int cycles = 0;
-
-
-		if (UQ_bool == 0)
-		{
-			do
-			{
-				// Update Console
-				update_console(pvalue, arms, bank, pulln);
-
-				// User Pull
-				choice = user_pull_arm(mean, stddev, arms, pvalue, pulln, bank);
-
-			} while (choice != -1);
-		}
-		else if (UQ_bool == 1)
-		{
-			do
-			{
-				// Update Console
-				//update_console(pvalue, arms, bank, pulln);
-
-				// Q-Learner Pull
-				choice = Q_pull_arm(mean, stddev, arms, pvalue, pulln, bank, epsilon, alpha, life_cycle, history);
-
-				// Keep count of how many times each arm gets pulled
-				if (choice != -1 && life_cycle > 299)
-				{
-					pull_count[choice] = pull_count[choice] + 1;
-				}
-
-				////
-				if (choice != -1)
-				{
-					big_bank.at(pulln - 1) = big_bank.at(pulln - 1) + pvalue[choice];
-					cout << big_bank.at(pulln - 1) << endl;// = big_bank[pulln] + pvalue[choice];
-
-				
-				switch (choice)
-				{
-				case 0:
-					big_pull0.at(pulln - 1) = big_pull0.at(pulln - 1) + 1;
-					break;
-
-				case 1:
-					big_pull1.at(pulln - 1) = big_pull1.at(pulln - 1) + 1;
-					break;
-
-				case 2:
-					big_pull2.at(pulln - 1) = big_pull2.at(pulln - 1) + 1;
-					break;
-
-				case 3:
-					big_pull3.at(pulln - 1) = big_pull3.at(pulln - 1) + 1;
-					break;
-
-				case 4:
-					big_pull4.at(pulln - 1) = big_pull4.at(pulln - 1) + 1;
-					break;
-				}
-				}
-
-				////
-
-			} while (choice != -1);
-		}
-		else if (UQ_bool == -1)
-		{
-			// Run Self test A
-			TestA_Function(mean, stddev, arms);
-		}
-
-		// Send variables to TestB_Function for test for Pass/Fail grading
-		if (arms < 7 && life_cycle > 299)
-		{
-			TestB_Function(pull_count, mean, stddev, arms, pulln);
-		}
+		cout << "\t\t    ***" << arms << " is not a valid arm number***\n\n\n\n\n " <<
+			"Please Pick a new number of arms\n\n\n\n\n\n" << endl;
+		cin >> arms;
 	}
-	return (0);
+
+	// Get or assign mean and stddev for each arm
+	vector<double> mean;
+	vector < double> stddev;
+	random_or_assigned(mean, stddev, arms);
+
+	// User play or Q-Learner play?
+	int UQ_bool;
+	double epsilon;
+	double alpha;
+	int life_cycle;
+	UQ_bool = UQ_prompt(epsilon, alpha, life_cycle);
+
+	// Pause the console screen and wait until user input
+	system("PAUSE");
+
+	// Create arms value vectors and history
+	deque<double> pvalue;
+	deque<double> history;
+	deque<double> pull_count;
+	// Initialize Previous Payout to 0
+	for (int i = 0; i < arms; i++)
+	{
+		history.push_back(0.0);
+		pvalue.push_back(0.0);
+		pull_count.push_back(0.0);
+	}
+
+	// Create Bank
+	deque<double> bank;
+	bank.push_back(1000);
+
+	// Initialize pull number
+	int pulln = 0;
+	int choice;
+	int cycles = 0;
+
+
+	if (UQ_bool == 0)
+	{
+		do
+		{
+			// Update Console
+			update_console(pvalue, arms, bank, pulln);
+
+			// User Pull
+			choice = user_pull_arm(mean, stddev, arms, pvalue, pulln, bank);
+
+		} while (choice != -1);
+	}
+	else if (UQ_bool == 1)
+	{
+		do
+		{
+			// Update Console
+			update_console(pvalue, arms, bank, pulln);
+
+			// Q-Learner Pull
+			choice = Q_pull_arm(mean, stddev, arms, pvalue, pulln, bank, epsilon, alpha, life_cycle, history);
+
+			// Keep count of how many times each arm gets pulled
+			if (choice != -1 && life_cycle > 299)
+			{
+				pull_count[choice] = pull_count[choice] + 1;
+			}
+
+		} while (choice != -1);
+	}
+	else if (UQ_bool == -1)
+	{
+		// Run Self test A
+		TestA_Function(mean, stddev, arms);
+	}
+
+	// Send variables to TestB_Function for test for Pass/Fail grading
+	if (arms < 7 && life_cycle > 299)
+	{
+		TestB_Function(pull_count, mean, stddev, arms, pulln);
+	}
+return (0);
 }
 
 //===========================================================================					update_console
@@ -375,7 +309,7 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
 	char letter;
 
 	//Prompt User
-	cout << "\n\n\tUser Play or Action-Value-Learner(A.V.L.)? (U/q)	[T for Test A]" << endl;
+	cout << "\n\n\tUser Play or Action-Value-Learner(A.V.L.)? (U/a)	[T for Test A]" << endl;
 	cin >> letter;
 
 	switch (letter)
@@ -391,8 +325,8 @@ int UQ_prompt(double &epsilon, double &alpha, int &life_cycle)
 		break;
 
 		//If q(Q) then assign user defined variables
-	case 'Q':
-	case 'q':
+	case 'A':
+	case 'a':
 		UQ_bool = 1;
 
 		cout << "\n\nPlease pick a learning ratio (alpha) (0 <= A <= 1)" << endl;
@@ -606,14 +540,3 @@ void TestB_Function(deque<double> pull_count, vector<double> mean, vector<double
 	cout << "\n\nA.V.L. has picked " << best_arm << " as the best arm!\n\n" << endl;
 
 }
-//===========================================================================					File_Name
-/*
-	time_t rawtime;
-	struct tm * timeinfo;
-	char buffer[80];
-
-	time(&rawtime);
-	timeinfo = localtime(&rawtime);
-
-	strftime(buffer, 80, "%F_%T", timeinfo);
-*/
