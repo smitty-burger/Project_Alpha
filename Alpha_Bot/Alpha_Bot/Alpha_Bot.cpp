@@ -71,6 +71,7 @@ void TestA_Function(vector<double> &mean, vector<double> &stddev, int arms);
 		//run self test A
 void TestB_Function(deque<double> pull_count, vector<double> mean, vector<double> stddev, int arms, int pulln);
 		//run self test B
+void Save_to(deque<double> big_bank, deque<double> big_pull0, deque<double> big_pull1, deque<double> big_pull2, deque<double> big_pull3, deque<double> big_pull4);
 
 //===========================================================================					MAIN
 int main()
@@ -99,7 +100,7 @@ int main()
 	stddev.push_back(.5);
 	int UQ_bool = 1;
 	double epsilon = .2;
-	double alpha = .1;
+	double alpha = .5;
 	int life_cycle = 1000;
 	////
 
@@ -235,6 +236,8 @@ int main()
 			TestB_Function(pull_count, mean, stddev, arms, pulln);
 		}
 	}
+	Save_to(big_bank, big_pull0, big_pull1, big_pull2, big_pull3, big_pull4);
+
 	return (0);
 }
 
@@ -468,16 +471,12 @@ int Q_pull_arm(vector<double> &mean, vector<double> &stddev, int arms, deque<dou
 	best = distance(begin(history), biggest);
 
 	//Randomly pick an arm to pull, and if the next pull should be exploratory
-	//Get System Time
-	unsigned seed = time(0);
-	//Seed Random Number Generator
-	srand(seed);
 	//Pick arm
-	random_arm = rand() % arms;
+	random_arm = gen() % arms;
 	//Exploit?
 	double exp_thresh;
 	exp_thresh = epsilon * 10000;
-	exploit = rand() % 10000;
+	exploit = gen() % 10000;
 	if (exploit <= exp_thresh)
 	{
 		choice = random_arm;
@@ -606,14 +605,29 @@ void TestB_Function(deque<double> pull_count, vector<double> mean, vector<double
 	cout << "\n\nA.V.L. has picked " << best_arm << " as the best arm!\n\n" << endl;
 
 }
-//===========================================================================					File_Name
-/*
-	time_t rawtime;
-	struct tm * timeinfo;
-	char buffer[80];
 
-	time(&rawtime);
-	timeinfo = localtime(&rawtime);
+//===========================================================================					Save_to
+void Save_to(deque<double> big_bank, deque<double> big_pull0, deque<double> big_pull1, deque<double> big_pull2, deque<double> big_pull3, deque<double> big_pull4)
+{
 
-	strftime(buffer, 80, "%F_%T", timeinfo);
-*/
+	//Create output file
+	ofstream output_file;
+	output_file.open("MAB_Output");
+	output_file << fixed << showpoint << setprecision(2);
+
+	//User console update
+	cout << "Now Writing Data To File\n\n\n" << endl;
+
+	//Write to file
+	for (int i = 0; i < 1000; i++)
+	{
+		output_file << big_bank[i] << '\t' << big_pull0[i] << '\t' << big_pull1[i] << '\t'
+			<< big_pull2[i] << '\t' << big_pull3[i] << '\t' << big_pull4[i] << endl;
+	}
+
+	//Close output file
+	output_file.close();
+
+	//User console update
+	cout << "Data Has Been Written To File\n\n\n" << endl;
+}
